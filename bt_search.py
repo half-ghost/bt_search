@@ -227,9 +227,6 @@ async def engine_search(bot, ev):
     mode = mes[:1]
     tag = mes[1:].strip()
     engine = ""
-    if type(mode) != int:
-        await bot.send(ev, "未指定引擎")
-        return
     await bot.send(ev, "请等待搜索结果")
     if mode == "1":
         engine = clm_crawler(tag)
