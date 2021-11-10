@@ -1,6 +1,6 @@
-from requests import get
 from bs4 import BeautifulSoup as bs
-from hoshino import Service
+import asyncio
+from hoshino import Service,aiorequests
 
 ciliwang = {
     "磁力猫":["https://clm134.xyz/", "https://clm126.xyz/", "https://clm129.xyz/", "https://clm130.xyz/", "https://clm131.xyz/", "https://clm132.xyz/", "https://clm133.xyz/"],
@@ -9,18 +9,21 @@ ciliwang = {
     "磁力蜘蛛":["https://www.btmovi.co/"], 
 }
 
-def clm_crawler(tag):
+async def clm_crawler(tag):
     url = ciliwang.get("磁力猫")[0]
-    geturl = get(url+f"search-{tag}-0-0-1.html")
+    try:
+        geturl = await aiorequests.get(url+f"search-{tag}-0-0-1.html", timeout = 6)
+    except:
+        return []
     count = 1
     while geturl.status_code != 200:
         url = ciliwang.get("磁力猫")[count]
-        geturl = get(url+f"search-{tag}-0-0-1.html")
+        geturl = await aiorequests.get(url+f"search-{tag}-0-0-1.html", timeout = 6)
         count += 1
         if count == 7:
             stat = "bad"
             return stat
-    reqs = geturl.text
+    reqs = await geturl.text
     title_list, magnet_list, info_list = [],[],[]
     soup = bs(reqs, "lxml")
     box_soup = soup.findAll(name = "div", class_ = "ssbox")
@@ -60,13 +63,16 @@ def clm_crawler(tag):
         mes_list.append(data)
     return mes_list
 
-def btsow_crawler(tag):
+async def btsow_crawler(tag):
     url = ciliwang.get("btsow")[0]
-    geturl = get(url+f"search/{tag}/page/1")
+    try:
+        geturl = await aiorequests.get(url+f"search/{tag}/page/1", timeout = 6)
+    except:
+        return []
     if geturl.status_code != 200:
         stat = "bad"
         return stat
-    reqs = geturl.text
+    reqs = await geturl.text
     magnet_list, title_list, info_list = [],[],[]
     soup = bs(reqs, "lxml")
     try:
@@ -81,7 +87,7 @@ def btsow_crawler(tag):
             title = content.a.get("title")
             magnet_list.append(href.replace("//btsow.rest/magnet/detail/hash/", "magnet:?xt=urn:btih:"))
             title_list.append(title.replace(tag, f"『{tag}』"))
-            info_list.append(size)
+            info_list.append(f"大小：{size}")
         else:
             continue
 
@@ -106,13 +112,16 @@ def btsow_crawler(tag):
         mes_list.append(data)
     return mes_list
 
-def zzs_crawler(tag):
+async def zzs_crawler(tag):
     url = ciliwang.get("种子搜")[0]
-    geturl = get(url+f"list/{tag}/1")
+    try:
+        geturl = await aiorequests.get(url+f"list/{tag}/1", timeout = 6)
+    except:
+        return []
     if geturl.status_code != 200:
         stat = "bad"
         return stat
-    reqs = geturl.text
+    reqs = await geturl.text
     title_list, magnet_list, info_list = [],[],[]
     soup = bs(reqs, "lxml")
     table_list = soup.findAll(name = "table", class_ = "table table-bordered table-striped")
@@ -151,13 +160,17 @@ def zzs_crawler(tag):
         mes_list.append(data)
     return mes_list
 
-def clzz_crawler(tag):
+async def clzz_crawler(tag):
     url = "https://www.btmovi.co/"
-    geturl = get(url+f"so/{tag}_rel_1.html")
+    try:
+        geturl = await aiorequests.get(url+f"so/{tag}_rel_1.html", timeout = 6)
+    except:
+        return []
     if geturl.status_code != 200:
         stat = "bad"
         return stat
-    reqs = geturl.text
+    print(geturl.status_code)
+    reqs = await geturl.text
     title_list, magnet_list, info_list = [],[],[]
     soup = bs(reqs, "lxml")
     item_list = soup.findAll(name = "div", class_ = "search-item")
@@ -205,20 +218,25 @@ sv = Service("磁力搜bot")
 async def gether_search(bot, ev):
     tag = ev.message.extract_plain_text().strip()
     await bot.send(ev, "聚合搜索需要的时间较久，请耐心等待")
-    engine1 = clm_crawler(tag)
-    engine2 = btsow_crawler(tag)
-    engine3 = zzs_crawler(tag)
-    engine4 = clzz_crawler(tag)
+    result = await asyncio.gather(clm_crawler(tag),btsow_crawler(tag),zzs_crawler(tag),clzz_crawler(tag))
+    engine1 = result[0]
+    engine2 = result[1]
+    engine3 = result[2]
+    engine4 = result[3]
+
     if engine1 == "bad" or len(engine1) <= 1:
         engine1 = []
     elif engine2 == "bad" or len(engine2) <= 1:
-        engine2 =[]
+        engine2 = []
     elif engine3 == "bad" or len(engine3) <= 1:
         engine3 = []
     elif engine4 == "bad" or len(engine4) <= 1:
         engine4 = []
 
     mes_list = engine1 + engine2 + engine3 + engine4
+    if mes_list == []:
+        await bot.send(ev, "无搜索结果，或引擎访问失败，请检查服务器日志")
+        return
     await bot.send_group_forward_msg(group_id=ev['group_id'], messages=mes_list)
 
 @sv.on_prefix("搜磁力")
@@ -227,20 +245,21 @@ async def engine_search(bot, ev):
     mode = mes[:1]
     tag = mes[1:].strip()
     engine = ""
+
     await bot.send(ev, "请等待搜索结果")
     if mode == "1":
-        engine = clm_crawler(tag)
+        engine = await clm_crawler(tag)
     elif mode == "2":
-        engine = btsow_crawler(tag)
+        engine = await btsow_crawler(tag)
     elif mode == "3":
-        engine = zzs_crawler(tag)
+        engine = await zzs_crawler(tag)
     elif mode == "4":
-        engine = clzz_crawler(tag)
+        engine = await clzz_crawler(tag)
 
     if engine == "bad":
         await bot.send(ev, "该引擎访问失败，可能是炸了，请换个引擎")
         return
     if len(engine) <= 1:
-        await bot.send(ev, "无搜索结果")
+        await bot.send(ev, "无搜索结果，或引擎访问失败，请检查服务器日志")
         return
     await bot.send_group_forward_msg(group_id=ev['group_id'], messages=engine)
