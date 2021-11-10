@@ -210,13 +210,13 @@ async def gether_search(bot, ev):
     engine3 = zzs_crawler(tag)
     engine4 = clzz_crawler(tag)
     if engine1 == "bad" or len(engine1) <= 1:
-        engine1 = ""
+        engine1 = []
     elif engine2 == "bad" or len(engine2) <= 1:
-        engine2 =""
+        engine2 =[]
     elif engine3 == "bad" or len(engine3) <= 1:
-        engine3 = ""
+        engine3 = []
     elif engine4 == "bad" or len(engine4) <= 1:
-        engine4 = ""
+        engine4 = []
 
     mes_list = engine1 + engine2 + engine3 + engine4
     await bot.send_group_forward_msg(group_id=ev['group_id'], messages=mes_list)
