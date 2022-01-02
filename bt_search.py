@@ -3,26 +3,38 @@ import asyncio
 from hoshino import Service,aiorequests
 
 ciliwang = {
-    "磁力猫":["https://clm134.xyz/", "https://clm126.xyz/", "https://clm129.xyz/", "https://clm130.xyz/", "https://clm131.xyz/", "https://clm132.xyz/", "https://clm133.xyz/"],
+    "磁力猫":["https://clm146.xyz/"],
     "btsow":["https://btsow.rest/"],
     "种子搜":["https://zhongziso50.xyz/"],
     "磁力蜘蛛":["https://www.btmovi.co/"], 
 }
+
+async def clm_beiyong():
+    reps = await aiorequests.get("https://xn--tfrs17es0d.com/", timeout = 6)
+    text = await reps.text
+    soup = bs(text, "lxml")
+    url_list = []
+    for i in soup.findAll(name = "a", target = "_blank"):
+        url = i.get("href")
+        url_list.append(url)
+    return url_list
 
 async def clm_crawler(tag):
     url = ciliwang.get("磁力猫")[0]
     try:
         geturl = await aiorequests.get(url+f"search-{tag}-0-0-1.html", timeout = 6)
     except:
-        return []
-    count = 1
-    while geturl.status_code != 200:
-        url = ciliwang.get("磁力猫")[count]
-        geturl = await aiorequests.get(url+f"search-{tag}-0-0-1.html", timeout = 6)
-        count += 1
-        if count == 7:
-            stat = "bad"
-            return stat
+        url_list = await clm_beiyong()
+        for url in url_list:
+            try:
+                geturl = await aiorequests.get(url+f"/search-{tag}-0-0-1.html", timeout = 6)
+                if geturl.status_code == 200:
+                    break
+            except:
+                if url_list.index(url) == len(url_list)-1:
+                    return []
+                else:
+                    continue
     reqs = await geturl.text
     title_list, magnet_list, info_list = [],[],[]
     soup = bs(reqs, "lxml")
