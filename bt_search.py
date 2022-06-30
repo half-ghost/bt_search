@@ -1,4 +1,4 @@
-help_text = f'''[搜磁力numtag]:num为指定的引擎，目前有3个，tag为搜索关键词
+help_text = f'''[搜磁力numtag]:num为指定的引擎，目前有4个，tag为搜索关键词
 [聚合搜索tag]:将所有引擎的搜索结果合并起来，tag为搜索关键词
 '''
 
